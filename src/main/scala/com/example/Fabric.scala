@@ -12,16 +12,25 @@ import com.example.InitMain.TxnProposal
 object Endorser {
 
   // final case class Endorsed(whom:String, replyTo: ActorRef[])
-  final case class submitTrasaction(whom:String)
-  def apply(): Behavior[submitTrasaction] = Behaviors.receive { (context, message) =>
-    context.log.info("Hello {}!", message.whom)
-    //#greeter-send-messages
+  final case class submitTransaction(whom:String)
+  def apply(): Behavior[submitTransaction] = Behaviors.receive { (context, message) =>
+    context.log.info("Endorser: Hello {}!", message.whom)
     // message.replyTo ! Endorsed(message.whom, context.self)
-    //#greeter-send-messages
     Behaviors.same
   }
 }
 
+
+object Client {
+
+ final case class createTransaction(whom:String)
+ def apply(): Behavior[createTransaction] =  Behaviors.receive { (context, message) =>
+    context.log.info("Client: Hello {}!", message.whom)
+    val replyTo = context.spawn(Endorser(), "endorser")
+    replyTo ! Endorser.submitTransaction(message.whom)
+    Behaviors.same
+  }
+}
 
 object InitMain {
 
@@ -30,12 +39,12 @@ final case class TxnProposal(name: String)
   def apply(): Behavior[TxnProposal] =
     Behaviors.setup { context =>
 
-      val endorser = context.spawn(Endorser(),"endorser")
+      val client = context.spawn(Client(),"client")
       //#create-actors
 
       Behaviors.receiveMessage { message =>
-
-        endorser ! Endorser.submitTrasaction(message.name)
+        // val replyTo = context.spawn(Endorser(), "endorser")
+        client ! Client.createTransaction(message.name)
         // greeter ! Greeter.Greet(message.name, replyTo)
         Behaviors.same
       }
